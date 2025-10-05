@@ -278,20 +278,137 @@ def mlp_boosting():
 
 	paxfig.set_labels(["max_depth", "layer.1", "layer.2", "score"])
 
-	plt.suptitle("StackingClassifier(MLPClassifier(...), ...)")
+	plt.suptitle("AdaBoostClassifier(MLPClassifier(...), ...)")
 	plt.show()
 
-mlp_boosting()
+#
+# 7/9 Bagging SVMs
+#
+def svm_classifier_bagging():
 
-def svc():
-
+	# https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html
+	# https://scikit-learn.org/stable/auto_examples/model_selection/plot_nested_cross_validation_iris.html
 	p_grid = {
-		"kernel": ["linear"],
-		"C":[1, 10]
+		"estimator": [
+			SVC(kernel="linear", C=1, max_iter=10),
+			SVC(kernel="linear", C=2, max_iter=10),
+			SVC(kernel="linear", C=3, max_iter=10),
+			SVC(kernel="linear", C=4, max_iter=10),
+			SVC(kernel="linear", C=5, max_iter=10),
+		],
+		"n_estimators":[2, 3, 4, 5]
 	}
 
-	svc = SVC()
+	clf = GridSearchCV(BaggingClassifier(), p_grid)
+	clf.fit(x, y)
 
-	clf = GridSearchCV(svc, p_grid)
+	scores = clf.cv_results_.get("mean_test_score")
+	params = clf.cv_results_.get("params")
 
+	grid = []
+
+	for score, param in zip(scores, params):
+		a = param["estimator"].C
+		b = param["n_estimators"]
+
+		grid.append([a, b, score])
+
+	paxfig = paxplot.pax_parallel(n_axes=3)
+	paxfig.plot(grid)
+
+	paxfig.add_colorbar(
+		ax_idx=2,
+		cmap="viridis",
+		colorbar_kwargs={"label": "Score"}
+	)
+
+	paxfig.set_labels(["C", "n_estimators", "score"])
+
+	plt.suptitle("BaggingClassifier(SVC(...), ...)")
+	plt.show()
+
+#
+# 8/9 Stacking SVMs
+#
+def svm_stacking():
+	estimators = []
+
+	for m in range(2, 4): # Stacking width
+		for i in range(2, 6): # SVM C param
+			estimators.append( [ (f"model{k}", SVC( kernel="linear", C=i, max_iter=10 )) for k in range(m) ] )
+
+	p_grid = {
+		"estimators": estimators,
+	}
+
+	clf = GridSearchCV(StackingClassifier([]), p_grid, n_jobs=-1)
+	clf.fit(x, y)
+
+	scores = clf.cv_results_.get("mean_test_score")
+	params = clf.cv_results_.get("params")
+
+	grid = []
+
+	for score, param in zip(scores, params):
+		a = len(param["estimators"])
+		b = param["estimators"][0][1].C
+
+		grid.append([a, b, score])
+
+	paxfig = paxplot.pax_parallel(n_axes=3)
+	paxfig.plot(grid)
+
+	paxfig.add_colorbar(
+		ax_idx=2,
+		cmap="viridis",
+		colorbar_kwargs={"label": "Score"}
+	)
+
+	paxfig.set_labels(["n_estimators", "C", "score"])
+
+	plt.suptitle("StackingClassifier(SVC(...), ...)")
+	plt.show()
+
+#
+# 9/9 Boosting SVMs
+#
+def svm_boosting():
+	p_grid = {
+		"estimator": [
+			SVC(kernel="linear", C=1, max_iter=10),
+			SVC(kernel="linear", C=2, max_iter=10),
+			SVC(kernel="linear", C=3, max_iter=10),
+			SVC(kernel="linear", C=4, max_iter=10),
+			SVC(kernel="linear", C=5, max_iter=10),
+		],
+		"n_estimators":[2, 3, 4, 5]
+	}
+
+	clf = GridSearchCV(AdaBoostClassifier(), p_grid, n_jobs=-1)
+	clf.fit(x, y)
+
+	scores = clf.cv_results_.get("mean_test_score")
+	params = clf.cv_results_.get("params")
+
+	grid = []
+
+	for score, param in zip(scores, params):
+		a = param["n_estimators"]
+		b = param["estimator"].C
+
+		grid.append([a, b, score])
+
+	paxfig = paxplot.pax_parallel(n_axes=3)
+	paxfig.plot(grid)
+
+	paxfig.add_colorbar(
+		ax_idx=2,
+		cmap="viridis",
+		colorbar_kwargs={"label": "Score"}
+	)
+
+	paxfig.set_labels(["n_estimators", "C", "score"])
+
+	plt.suptitle("AdaBoostClassifier(SVC(...), ...)")
+	plt.show()
 
