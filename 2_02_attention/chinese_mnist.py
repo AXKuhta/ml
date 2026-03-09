@@ -81,7 +81,7 @@ f1_metric = torchmetrics.F1Score("multiclass", num_classes=15).to(device)
 Xt = Xt.to(device)
 Yt = Yt.to(device)
 
-optimizer = torch.optim.RMSprop(model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 loss_fn = nn.CrossEntropyLoss()
 
 batch_size=64
