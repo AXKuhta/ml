@@ -104,9 +104,10 @@ for epoch in range(max_epochs):
 		preds = torch.cat([torch.argmax(model(minibatch), 1) for minibatch in x_batches])
 		truth = torch.argmax(Yt, 1)
 
+		acc = torch.mean( 1.0*(preds == truth) )
 		f1 = f1_metric(preds, truth)
 
-		print(f'Finished epoch {epoch}, latest loss {loss}, F1 {f1}')
+		print(f'Finished epoch {epoch}, latest loss {loss:.4f}, F1 {f1:.2f}, accuracy {acc:.2f}')
 
 """
 for epoch in range(n_epochs):
