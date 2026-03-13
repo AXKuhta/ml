@@ -18,12 +18,13 @@ device = torch.device("cuda")
 
 data = pd.read_csv("chineseMNIST.csv")
 
-Y=data.label.to_numpy()
-X=data.drop("label", axis=1).drop("character", axis=1).to_numpy()
+y = data.label.to_numpy()
+x = data.drop("label", axis=1).drop("character", axis=1).to_numpy()
 
-print(X.shape,Y.shape)
-unique_tags=len(np.unique(Y))
+print(x.shape,y.shape)
+unique_tags=len(np.unique(y))
 
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
 le = LabelEncoder()
@@ -33,13 +34,18 @@ le = LabelEncoder()
 # array([        9,        10,       100,      1000,     10000, 100000000,
 #               0,         1,         2,         3,         4,         5,
 #               6,         7,         8])
-vocab_y = le.fit(Y)
+vocab_y = le.fit(y)
+
+train_x_, test_x_, train_y_, test_y_ = train_test_split(x, y)
 
 import torch.nn.functional as F
 import torch.nn as nn
 
-Xt = torch.tensor(X, dtype=torch.float32)
-Yt=F.one_hot(torch.tensor(vocab_y.transform(Y)).to(int),num_classes=unique_tags).to(float)
+train_x = torch.tensor(train_x_, dtype=torch.float32)
+train_y = F.one_hot(torch.tensor(vocab_y.transform(train_y_)).to(int), num_classes=unique_tags).to(float)
+
+test_x = torch.tensor(test_x_, dtype=torch.float32)
+test_y = F.one_hot(torch.tensor(vocab_y.transform(test_y_)).to(int), num_classes=unique_tags).to(float)
 
 
 ####################################################################################
@@ -78,17 +84,19 @@ class CnClassifier(nn.Module):
 model = CnClassifier(unique_tags).to(device)
 f1_metric = torchmetrics.F1Score("multiclass", num_classes=15).to(device)
 
-Xt = Xt.to(device)
-Yt = Yt.to(device)
+train_x = train_x.to(device)
+train_y = train_y.to(device)
+test_x = test_x.to(device)
+test_y = test_y.to(device)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+optimizer = torch.optim.Adam(model.parameters(), lr=3e-4)
 loss_fn = nn.CrossEntropyLoss()
 
 batch_size=64
-max_epochs=1000
+max_epochs=100
 
-x_batches = torch.split(Xt, batch_size)
-y_batches = torch.split(Yt, batch_size)
+x_batches = torch.split(train_x, batch_size)
+y_batches = torch.split(train_y, batch_size)
 
 for epoch in range(max_epochs):
 	for bx, by in zip(x_batches, y_batches):
@@ -102,31 +110,12 @@ for epoch in range(max_epochs):
 
 	with torch.no_grad():
 		preds = torch.cat([torch.argmax(model(minibatch), 1) for minibatch in x_batches])
-		truth = torch.argmax(Yt, 1)
+		truth = torch.argmax(train_y, 1)
 
 		acc = torch.mean( 1.0*(preds == truth) )
 		f1 = f1_metric(preds, truth)
 
 		print(f'Finished epoch {epoch}, latest loss {loss:.4f}, F1 {f1:.2f}, accuracy {acc:.2f}')
-
-"""
-for epoch in range(n_epochs):
-    QM, QMn = 0,0
-    for i in range(0, len(Xt), batch_size):
-        Xbatch = Xt[i:i+batch_size]
-        y_pred = model(Xbatch)
-        ybatch = Yt[i:i+batch_size]
-        loss = loss_fn(y_pred, ybatch)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        with torch.no_grad():
-            QM += metric(ybatch, y_pred)
-            QMn += 1
-
-    print(f'Finished epoch {epoch}, latest loss {loss}, QM {QM/QMn}')
-"""
-
 
 ####################################################################################
 # Evals
@@ -134,9 +123,10 @@ for epoch in range(n_epochs):
 
 from sklearn.metrics import classification_report
 
-truth = torch.argmax(Yt, 1).cpu()
-preds = torch.cat([torch.argmax(model(minibatch), 1) for minibatch in torch.split(Xt, batch_size)]).cpu()
+truth = torch.argmax(test_y, 1).cpu()
+preds = torch.cat([torch.argmax(model(minibatch), 1) for minibatch in torch.split(test_x, batch_size)]).cpu()
 
 report = classification_report(truth, preds)
 
+print("Results on test:")
 print(report)
