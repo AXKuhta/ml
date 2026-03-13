@@ -36,7 +36,7 @@ le = LabelEncoder()
 #               6,         7,         8])
 vocab_y = le.fit(y)
 
-train_x_, test_x_, train_y_, test_y_ = train_test_split(x, y)
+train_x_, test_x_, train_y_, test_y_ = train_test_split(x, y, random_state=42)
 
 import torch.nn.functional as F
 import torch.nn as nn
@@ -62,6 +62,7 @@ class CnClassifier(nn.Module):
 		self.con4=nn.Conv2d(20,20,kernel_size=3,padding=1,stride=2)
 		self.con5=nn.Conv2d(20,20,kernel_size=3,padding=1,stride=2)
 		self.fl=nn.Flatten()
+		self.att=nn.TransformerEncoderLayer(80, 1, 80) # 3x Dense layers + Attention
 		self.solver=nn.Linear(80,outClasses)
 		self.act_output=nn.Softmax()
 
@@ -74,6 +75,7 @@ class CnClassifier(nn.Module):
 		x = self.act1(self.con5(x))
 		x = self.fl(x)
 
+		x = self.att(x)
 		x = self.solver(x)
 		return x
 
