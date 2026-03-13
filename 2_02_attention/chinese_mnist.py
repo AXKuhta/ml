@@ -83,6 +83,7 @@ class CnClassifier(nn.Module):
 
 model = CnClassifier(unique_tags).to(device)
 f1_metric = torchmetrics.F1Score("multiclass", num_classes=15).to(device)
+ap_metric = torchmetrics.AveragePrecision("multiclass", num_classes=15).to(device)
 
 train_x = train_x.to(device)
 train_y = train_y.to(device)
@@ -109,13 +110,15 @@ for epoch in range(max_epochs):
 		optimizer.step()
 
 	with torch.no_grad():
-		preds = torch.cat([torch.argmax(model(minibatch), 1) for minibatch in x_batches])
+		probs = [model(minibatch) for minibatch in x_batches]
+		preds = torch.cat([torch.argmax(x, 1) for x in probs])
 		truth = torch.argmax(train_y, 1)
 
 		acc = torch.mean( 1.0*(preds == truth) )
 		f1 = f1_metric(preds, truth)
+		ap = ap_metric(torch.vstack(probs), truth)
 
-		print(f'Finished epoch {epoch}, latest loss {loss:.4f}, F1 {f1:.2f}, accuracy {acc:.2f}')
+		print(f'Finished epoch {epoch}, latest loss {loss:.4f}, F1 {f1:.2f}, AP {ap:.2f}, accuracy {acc:.2f}')
 
 ####################################################################################
 # Evals
