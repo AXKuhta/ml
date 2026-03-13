@@ -16,7 +16,7 @@ device = torch.device("cuda")
 # Dataset
 ####################################################################################
 
-data = pd.read_csv("chineseMNIST.csv")
+data = pd.read_csv("chineseMNIST.csv.gz")
 
 y = data.label.to_numpy()
 x = data.drop("label", axis=1).drop("character", axis=1).to_numpy()
